@@ -1,0 +1,152 @@
+{# templates/admin/login.html #}
+{% load i18n static %}
+
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{% translate 'Log in' %} | Expense Tracker{% endblock %}</title>
+    {# Ensure these are plain URLs #}
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+        .login-card {
+            animation: fadeIn 0.5s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen px-4 py-12">
+    <div class="w-full max-w-md space-y-8 login-card">
+        <div>
+            <div class="flex justify-center text-indigo-600 mb-6">
+                <i class="fas fa-chart-pie text-6xl"></i>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Welcome to Expense Tracker
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                {% translate 'Please enter your credentials to log in.' %}
+            </p>
+        </div>
+
+        {% if form.errors and not form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-red-500"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-red-700">
+                    {% if form.errors.items|length == 1 %}{% translate "Please correct the error below." %}{% else %}{% translate "Please correct the errors below." %}{% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+        <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle text-red-500"></i>
+                </div>
+                <div class="ml-3">
+                    {% for error in form.non_field_errors %}
+                    <p class="text-sm text-red-700">{{ error }}</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user.is_authenticated %}
+        <p class="text-center text-sm text-gray-600">
+        {% blocktranslate trimmed %}
+            You are authenticated as {{ username }}, but are not authorized to
+            access this page. Would you like to login to a different account?
+        {% endblocktranslate %}
+        </p>
+        {% endif %}
+
+        <form class="mt-8 space-y-6 bg-white p-8 sm:p-10 shadow-2xl rounded-xl" action="{{ app_path }}" method="post" id="login-form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+            
+            <div>
+                <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.username.label|capfirst }}
+                </label>
+                <div class="mt-1">
+                    {{ form.username }}
+                </div>
+                {% if form.username.errors %}
+                    {% for error in form.username.errors %}
+                    <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+
+            <div>
+                <div class="flex items-center justify-between">
+                    <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ form.password.label|capfirst }}
+                    </label>
+                    {% if password_reset_url %} {# Check if password_reset_url is provided by the context #}
+                    <div class="text-sm">
+                        <a href="{{ password_reset_url }}" class="font-medium text-indigo-600 hover:text-indigo-500">
+                            {% translate 'Forgotten your password?' %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mt-1">
+                    {{ form.password }}
+                </div>
+                 {% if form.password.errors %}
+                    {% for error in form.password.errors %}
+                    <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+                    {% endfor %}
+                {% endif %}
+            </div>
+            
+            {# This was likely intended to define the variable for the if check above, not to be displayed here. #}
+            {# {% url 'admin_password_reset' as password_reset_url %} #}
+
+            <div>
+                <button type="submit" class="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                    <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                        <i class="fas fa-lock h-5 w-5 text-indigo-500 group-hover:text-indigo-400"></i>
+                    </span>
+                    {% translate 'Log in' %}
+                </button>
+            </div>
+        </form>
+        
+    </div>
+
+    <script>
+        // Add Tailwind classes to Django form widgets
+        document.addEventListener('DOMContentLoaded', function() {
+            const usernameInput = document.getElementById('{{ form.username.id_for_label }}');
+            if (usernameInput) {
+                usernameInput.classList.add('appearance-none', 'block', 'w-full', 'px-3', 'py-2', 'border', 'border-gray-300', 'rounded-md', 'shadow-sm', 'placeholder-gray-400', 'focus:outline-none', 'focus:ring-indigo-500', 'focus:border-indigo-500', 'sm:text-sm');
+                usernameInput.setAttribute('placeholder', 'Username');
+            }
+            const passwordInput = document.getElementById('{{ form.password.id_for_label }}');
+            if (passwordInput) {
+                passwordInput.classList.add('appearance-none', 'block', 'w-full', 'px-3', 'py-2', 'border', 'border-gray-300', 'rounded-md', 'shadow-sm', 'placeholder-gray-400', 'focus:outline-none', 'focus:ring-indigo-500', 'focus:border-indigo-500', 'sm:text-sm');
+                passwordInput.setAttribute('placeholder', 'Password');
+            }
+        });
+    </script>
+</body>
+</html>

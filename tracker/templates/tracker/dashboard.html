@@ -1,0 +1,257 @@
+{# tracker/templates/tracker/dashboard.html #}
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+
+{% block title %}Dashboard - Expense Tracker{% endblock %}
+
+{% block page_title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    {# Summary Stats - No change #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium">Total Income</h3>
+                <i class="fas fa-arrow-up text-3xl opacity-50"></i>
+            </div>
+            <p class="mt-2 text-4xl font-bold">{{ total_income|floatformat:2|intcomma }} €</p>
+        </div>
+        <div class="bg-gradient-to-r from-red-500 to-rose-600 shadow-lg rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium">Total Expenses</h3>
+                <i class="fas fa-arrow-down text-3xl opacity-50"></i>
+            </div>
+            <p class="mt-2 text-4xl font-bold">{{ total_expenses|floatformat:2|intcomma }} €</p>
+        </div>
+        <div class="bg-gradient-to-r {% if net_savings >= 0 %}from-blue-500 to-indigo-600{% else %}from-yellow-400 to-amber-500{% endif %} shadow-lg rounded-xl p-6 text-white">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-medium">Net Savings</h3>
+                <i class="fas fa-piggy-bank text-3xl opacity-50"></i>
+            </div>
+            <p class="mt-2 text-4xl font-bold">{{ net_savings|floatformat:2|intcomma }} €</p>
+        </div>
+    </div>
+
+    {# Current Account Balances Section - NEW #}
+    <div class="bg-white shadow-lg rounded-xl p-6">
+        <h3 class="text-xl font-semibold text-gray-700 mb-4">Current Account Balances</h3>
+        {% if account_current_balances %}
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for acc_balance in account_current_balances %}
+                    <div class="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-lg p-4 shadow hover:shadow-md transition-shadow duration-200">
+                        <div class="flex items-center justify-between mb-1">
+                            <h4 class="text-md font-semibold text-indigo-700">{{ acc_balance.name }}</h4>
+                            <i class="fas fa-wallet text-indigo-400"></i>
+                        </div>
+                        <p class="text-2xl font-bold text-gray-800">{{ acc_balance.balance|floatformat:2|intcomma }} €</p>
+                        {% if acc_balance.last_updated_date %}
+                            <p class="text-xs text-gray-500 mt-1">As of: {{ acc_balance.last_updated_date|date:"Y-m-d" }}</p>
+                        {% else %}
+                            <p class="text-xs text-gray-500 mt-1">No balance data</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-gray-500 text-center py-6">No accounts found or no balance data available.</p>
+        {% endif %}
+    </div>
+
+
+    {# Charts #}
+    <div class="grid grid-cols-1 gap-6">
+        {# Account Balance Evolution Chart #}
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                <h3 class="text-xl font-semibold text-gray-700">Account Balance Evolution</h3>
+                <form method="GET" action="{% url 'tracker:dashboard' %}" class="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                    <div>
+                        <label for="start_date" class="sr-only">Start Date</label>
+                        <input type="date" name="start_date" id="start_date" value="{{ request_start_date|default:'' }}"
+                               class="py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                    <span class="text-gray-500 hidden sm:block">-</span>
+                    <div>
+                        <label for="end_date" class="sr-only">End Date</label>
+                        <input type="date" name="end_date" id="end_date" value="{{ request_end_date|default:'' }}"
+                               class="py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                    </div>
+                    <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm text-sm flex items-center justify-center">
+                        <i class="fas fa-filter mr-2"></i>Filter
+                    </button>
+                     <a href="{% url 'tracker:dashboard' %}" class="w-full sm:w-auto text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50" title="Reset to default (last 90 days)">
+                        Reset
+                    </a>
+                </form>
+            </div>
+             <div class="chart-container h-80 md:h-96"> 
+                <canvas id="accountBalanceEvolutionChart"></canvas>
+            </div>
+        </div>
+
+        {# Expenses by Category Chart #}
+        <div class="bg-white shadow-lg rounded-xl p-6">
+            <h3 class="text-xl font-semibold text-gray-700 mb-4">Expenses by Category</h3>
+            <div class="chart-container h-80 md:h-96"> 
+                <canvas id="expensesByCategoryChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {# Recent Transactions - No change #}
+    <div class="bg-white shadow-lg rounded-xl mt-8"> 
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-xl font-semibold text-gray-700">Recent Transactions</h3>
+        </div>
+        <div class="p-2 sm:p-0">
+            {% if recent_transactions %}
+                {% include "tracker/_transaction_table.html" with transactions=recent_transactions is_paginated=False %}
+            {% else %}
+                <p class="text-gray-500 text-center py-10">No transactions recorded yet.</p>
+            {% endif %}
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 text-center">
+            <a href="{% url 'tracker:transaction_list' %}" class="text-indigo-600 hover:text-indigo-800 font-medium">
+                View All Transactions <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const generateRandomColors = (numColors) => {
+        const colors = [];
+        for (let i = 0; i < numColors; i++) {
+            const r = Math.floor(Math.random() * 200 + 55); 
+            const g = Math.floor(Math.random() * 200 + 55);
+            const b = Math.floor(Math.random() * 200 + 55);
+            colors.push(`rgba(${r}, ${g}, ${b}, 0.7)`); 
+        }
+        return colors;
+    };
+    
+    const commonTooltipCallbacks = {
+        label: function(context) {
+            let label = context.dataset.label || context.label || ''; 
+            if (label) {
+                label += ': ';
+            }
+            const value = context.parsed.y !== undefined ? context.parsed.y : (context.parsed.x !== undefined ? context.parsed.x : context.parsed);
+            if (value !== null && value !== undefined) {
+                label += new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
+            }
+            return label;
+        }
+    };
+
+    // Account Balance Evolution Chart (Line)
+    const balanceCtx = document.getElementById('accountBalanceEvolutionChart');
+    if (balanceCtx) {
+        try {
+            const balanceDatasetsInput = JSON.parse('{{ balance_evolution_datasets|escapejs|default:"[]" }}');
+            const lineColors = ['#4F46E5', '#DB2777', '#10B981', '#F59E0B', '#8B5CF6', '#EF4444', '#3B82F6', '#22C55E', '#800080']; // Added purple for Total
+
+            const chartDatasets = balanceDatasetsInput.map((dataset, index) => {
+                const dataPoints = Object.entries(dataset.data).map(([dateStr, value]) => ({ x: dateStr, y: value }));
+                dataPoints.sort((a, b) => new Date(a.x) - new Date(b.x)); 
+                return {
+                    label: dataset.label, data: dataPoints, fill: false,
+                    borderColor: dataset.borderColor || lineColors[index % lineColors.length],
+                    backgroundColor: dataset.backgroundColor || lineColors[index % lineColors.length], // For points
+                    tension: dataset.tension || 0.3, 
+                    borderWidth: dataset.borderWidth || 2.5, 
+                    pointRadius: dataset.pointRadius === undefined ? 0 : dataset.pointRadius, 
+                    pointHoverRadius: dataset.pointHoverRadius === undefined ? 6 : dataset.pointHoverRadius,
+                    order: dataset.order // Preserve order if set (for Total line)
+                };
+            });
+
+            if (chartDatasets.length > 0 && chartDatasets.some(ds => ds.data.length > 0)) {
+                new Chart(balanceCtx, {
+                    type: 'line', data: { datasets: chartDatasets },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                type: 'time',
+                                time: { unit: 'day', tooltipFormat: 'MMM dd, yy', displayFormats: { day: 'MMM dd' }}, 
+                                title: { display: true, text: 'Date', font: { weight: 'semibold' } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                title: { display: true, text: 'Balance (€)', font: { weight: 'semibold' } },
+                                ticks: { callback: (value) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(value) },
+                                grid: { color: '#e5e7eb', borderDash: [3, 3] } 
+                            }
+                        },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { padding: 15, boxWidth: 12 } },
+                            tooltip: { mode: 'index', intersect: false, callbacks: commonTooltipCallbacks, bodySpacing: 4, padding: 10, titleFont: { weight: 'bold'} }
+                        },
+                        interaction: { mode: 'nearest', axis: 'x', intersect: false }
+                    }
+                });
+            } else {
+                balanceCtx.parentNode.innerHTML = '<p class="text-gray-500 text-center py-10">No data available for the selected date range to display account balance evolution.</p>';
+            }
+        } catch (e) {
+            console.error("Error parsing balance chart data:", e);
+            balanceCtx.parentNode.innerHTML = '<p class="text-red-500 text-center py-10">Error loading balance chart data.</p>';
+        }
+    }
+
+    // Expenses by Category Chart (Bar Chart)
+    const expensesCtx = document.getElementById('expensesByCategoryChart');
+    if (expensesCtx) {
+        try {
+            const expensesLabels = JSON.parse('{{ expenses_by_category_labels|escapejs|default:"[]" }}');
+            const expensesData = JSON.parse('{{ expenses_by_category_data|escapejs|default:"[]" }}');
+
+            if (expensesLabels.length > 0 && expensesData.length > 0) {
+                new Chart(expensesCtx, {
+                    type: 'bar', 
+                    data: {
+                        labels: expensesLabels,
+                        datasets: [{
+                            label: 'Expenses (€)', 
+                            data: expensesData,
+                            backgroundColor: generateRandomColors(expensesData.length), 
+                            borderColor: generateRandomColors(expensesData.length).map(color => color.replace('0.7', '1')), 
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, indexAxis: 'x', 
+                        scales: {
+                            x: { 
+                                title: { display: true, text: 'Category', font: { weight: 'semibold' } },
+                                grid: { display: false }
+                            },
+                            y: { 
+                                beginAtZero: true,
+                                title: { display: true, text: 'Amount (€)', font: { weight: 'semibold' } },
+                                ticks: { callback: (value) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 0 }).format(value) }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'bottom', labels: { padding: 15, boxWidth: 12 } },
+                            tooltip: { callbacks: commonTooltipCallbacks, bodySpacing: 4, padding: 10 }
+                        }
+                    }
+                });
+            } else {
+                 expensesCtx.parentNode.innerHTML = '<p class="text-gray-500 text-center py-10">No expense data available for the chart.</p>';
+            }
+        } catch (e) {
+            console.error("Error parsing expenses chart data:", e);
+            expensesCtx.parentNode.innerHTML = '<p class="text-red-500 text-center py-10">Error loading expense chart data.</p>';
+        }
+    }
+});
+</script>
+{% endblock %}

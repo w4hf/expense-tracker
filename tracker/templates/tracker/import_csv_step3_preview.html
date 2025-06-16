@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load template_extras %}
+{% load humanize %}
+
+{% block title %}Import CSV - Step 3 - Expense Tracker{% endblock %}
+{% block page_title %}Import Transactions: Step 3/3 - Preview & Confirm{% endblock %}
+
+{% block content %}
+<div class="bg-white p-8 rounded-xl shadow-lg">
+    <p class="text-sm text-gray-600">Review the data parsed from <strong>{{ filename }}</strong>. 
+    Only error-free rows from the entire file will be imported. 
+    A total of <strong class="text-indigo-600">{{ total_parsed_rows|intcomma }}</strong> rows (out of {{ total_csv_rows|intcomma }} in CSV) appear valid for import.
+    </p>
+
+    {% if errors %}
+    <div class="mt-6 mb-4 p-4 rounded-md bg-yellow-50 border-l-4 border-yellow-400">
+        <div class="flex">
+            <div class="flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-500 text-xl"></i>
+            </div>
+            <div class="ml-3">
+                <h3 class="text-sm font-medium text-yellow-800">Potential Issues Found (showing first {{ errors|length }}):</h3>
+                <ul class="mt-2 list-disc list-inside text-xs text-yellow-700 space-y-1">
+                    {% for error in errors %}
+                    <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+                {% if has_more_errors %}
+                <p class="mt-2 text-xs text-yellow-700"><em>And more... Please check your CSV file and mapping if widespread issues are reported.</em></p>
+                {% endif %}
+                <p class="mt-2 text-xs text-yellow-700">Rows with these issues (from the entire file) will be skipped during import.</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if preview_data %}
+        <h3 class="text-md font-medium text-gray-700 mt-6 mb-2">Data Preview (first {{ preview_data|length }} parsed rows):</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 text-xs">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Account</th>
+                        <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                        <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Description</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                        <th class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                        <th class="px-3 py-2 text-right font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Balance</th>
+                        <th class="px-3 py-2 text-center font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in preview_data %}
+                    <tr class="{% if row.has_errors %}bg-red-50{% endif %}">
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ row.date|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ row.account_name|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-600 truncate max-w-xs" title="{{row.title|default:''}}">{{ row.title|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-500 hidden sm:table-cell truncate max-w-xs" title="{{row.description|default:''}}">{{ row.description|truncatechars:20|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right font-medium {% if row.amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                            {{ row.amount|floatformat:2|default:"-" }}
+                        </td>
+                        <td class="px-3 py-2 whitespace-nowrap text-gray-600">{{ row.category_name|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-right text-gray-500 hidden sm:table-cell">{{ row.balance_after_transaction|floatformat:2|default:"-" }}</td>
+                        <td class="px-3 py-2 whitespace-nowrap text-center">
+                            {% if row.has_errors %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Error</span>
+                            {% else %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif not errors %}
+         <div class="mt-6 p-4 rounded-md bg-blue-50 border-l-4 border-blue-400">
+            <p class="text-sm text-blue-700">No data to preview. This might mean the CSV was empty or no rows matched the parsing criteria.</p>
+        </div>
+    {% endif %}
+
+    <form method="post" action="{% url 'tracker:process_csv_import' %}" class="mt-8">
+        {% csrf_token %}
+        <div class="flex items-center justify-between pt-5 border-t border-gray-200">
+            <a href="{% url 'tracker:import_csv_step2_mapping' %}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Mapping
+            </a>
+            {% if total_parsed_rows > 0 %}
+                <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 border border-transparent rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 ease-in-out" 
+                        onclick="return confirm('Are you sure you want to import these {{ total_parsed_rows|intcomma }} transactions? This action cannot be easily undone.');">
+                    <i class="fas fa-check-circle mr-2"></i>Confirm and Import {{ total_parsed_rows|intcomma }} Transactions
+                </button>
+            {% else %}
+                 <button type="button" class="px-4 py-2 text-sm font-medium text-gray-400 bg-gray-200 border border-transparent rounded-lg shadow-sm cursor-not-allowed" disabled>
+                    Nothing to Import
+                </button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

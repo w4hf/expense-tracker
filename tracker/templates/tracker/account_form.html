@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }} - Expense Tracker{% endblock %}
+{% block page_title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-lg space-y-6">
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div>
+            <label for="{{ form.name.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                {{ form.name.label }} {% if form.name.field.required %}<span class="required-asterisk">*</span>{% endif %}
+            </label>
+            <div class="mt-1">
+                {{ form.name }}
+            </div>
+            {% if form.name.help_text %}
+                <p class="mt-2 text-xs text-gray-500">{{ form.name.help_text|safe }}</p>
+            {% endif %}
+            {% for error in form.name.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 border-t border-gray-200 pt-6">
+            <a href="{% url 'tracker:account_list' %}" class="{{ common_cancel_button_classes }}">
+                Cancel
+            </a>
+            <button type="submit" class="{{ common_button_classes }}">
+                <i class="fas fa-save mr-2"></i>Save Account
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

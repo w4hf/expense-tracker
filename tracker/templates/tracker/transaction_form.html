@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title|default:"Transaction Form" }} - Expense Tracker{% endblock %}
+{% block page_title %}{{ form_title|default:"Manage Transaction" }}{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-xl">
+    {% if form_subtitle %}
+        <p class="text-sm text-gray-500 mb-6">{{ form_subtitle }}</p>
+    {% endif %}
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {# Date Field #}
+            <div>
+                <label for="{{ form.date.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.date.label }} {% if form.date.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.date }}
+                {% for error in form.date.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {# Account Field #}
+            <div>
+                <label for="{{ form.account.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.account.label }} {% if form.account.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.account }}
+                {% for error in form.account.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {# Title Field #}
+            <div class="md:col-span-2">
+                <label for="{{ form.title.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.title.label }} {% if form.title.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.title }}
+                {% for error in form.title.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {# Description Field #}
+            <div class="md:col-span-2">
+                <label for="{{ form.description.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.description.label }} {% if form.description.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.description }}
+                {% for error in form.description.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            
+            {# Amount Field #}
+            <div>
+                <label for="{{ form.amount.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.amount.label }} {% if form.amount.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.amount }}
+                {% for error in form.amount.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {# Category Field #}
+            <div>
+                <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.category.label }} {% if form.category.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.category }}
+                {% for error in form.category.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+
+            {# Balance After Transaction Field #}
+            <div>
+                <label for="{{ form.balance_after_transaction.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ form.balance_after_transaction.label }} {% if form.balance_after_transaction.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                {{ form.balance_after_transaction }}
+                {% if form.balance_after_transaction.help_text %}<p class="mt-1 text-xs text-gray-500">{{ form.balance_after_transaction.help_text|safe }}</p>{% endif %}
+                {% for error in form.balance_after_transaction.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+            </div>
+            
+            {# Is Zakatable Field #}
+            <div class="md:col-span-2 flex items-center pt-2">
+                {{ form.is_zakatable }}
+                <label for="{{ form.is_zakatable.id_for_label }}" class="ml-2 block text-sm font-medium text-gray-700">
+                    {{ form.is_zakatable.label }}
+                </label>
+            </div>
+             {% if form.is_zakatable.help_text %}<p class="text-xs text-gray-500 md:col-span-2">{{ form.is_zakatable.help_text|safe }}</p>{% endif %}
+             {% for error in form.is_zakatable.errors %}<p class="text-xs text-red-600 md:col-span-2">{{ error }}</p>{% endfor %}
+        </div>
+        
+        <div class="flex items-center justify-end space-x-3 border-t border-gray-200 pt-6 mt-8">
+            <a href="{% url 'tracker:transaction_list' %}" class="{{ common_cancel_button_classes }}">
+                Cancel
+            </a>
+            <button type="submit" class="{{ common_button_classes }}">
+                <i class="fas fa-save mr-2"></i>Save Transaction
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

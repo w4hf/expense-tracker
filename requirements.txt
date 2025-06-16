@@ -1,0 +1,5 @@
+Django>=4.0,<5.0
+django-crispy-forms
+pandas>=1.0  # For CSV processing in views
+# psycopg2-binary  # If using PostgreSQL
+# openpyxl # if you plan to support excel files with pandas

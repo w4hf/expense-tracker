@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% load template_extras %} 
+
+{% block title %}Import CSV - Step 2 - Expense Tracker{% endblock %}
+{% block page_title %}Import Transactions: Step 2/3 - Map Columns{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <p class="text-sm text-gray-600 mb-2">Map the columns from your CSV file (<strong>{{ filename }}</strong>) to the required transaction fields.</p>
+    <p class="text-xs text-gray-500 mb-6">New Accounts and Categories will be created automatically if they don't exist based on the names provided in the CSV.</p>
+    
+    {% if sample_rows %}
+    <div class="mb-6">
+        <h3 class="text-md font-medium text-gray-700 mb-2">CSV Sample Data (first 3 rows):</h3>
+        <div class="overflow-x-auto rounded-lg border border-gray-200 text-xs">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        {% for header in csv_headers %}
+                            <th scope="col" class="px-3 py-2 text-left font-medium text-gray-500 uppercase tracking-wider">{{ header }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for row in sample_rows %}
+                    <tr>
+                        {% for header in csv_headers %}
+                            <td class="px-3 py-2 whitespace-nowrap text-gray-600 truncate max-w-xs" title="{{ row|get_item:header }}">{{ row|get_item:header|truncatechars:25 }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {% for field in form %}
+            <div>
+                <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                    {{ field.label }} {% if field.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                </label>
+                <div class="mt-1">
+                    {{ field }}
+                </div>
+                {% if field.help_text %}
+                    <p class="mt-1 text-xs text-gray-500">{{ field.help_text|safe }}</p>
+                {% endif %}
+                {% for error in field.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="flex items-center justify-between pt-5 border-t border-gray-200">
+            <a href="{% url 'tracker:import_csv_step1' %}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Upload
+            </a>
+            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 border border-transparent rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                Next: Preview Data <i class="fas fa-arrow-right ml-2"></i>
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

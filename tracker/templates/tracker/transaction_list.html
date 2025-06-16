@@ -1,0 +1,223 @@
+{# tracker/templates/tracker/transaction_list.html #}
+{% extends "base.html" %}
+
+{% block title %}Transactions - Expense Tracker{% endblock %}
+{% block page_title %}All Transactions{% endblock %}
+
+{% block content %}
+{# Filter Form #}
+<div class="bg-white p-4 sm:p-6 rounded-xl shadow-lg mb-6">
+    <form method="GET" action="{% url 'tracker:transaction_list' %}" class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+            <div>
+                <label for="filter_account" class="block text-sm font-medium text-gray-700">Account</label>
+                <select name="account" id="filter_account" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Accounts</option>
+                    {% for acc in all_accounts %}
+                        <option value="{{ acc.pk }}" {% if request.GET.account == acc.pk|stringformat:"s" %}selected{% endif %}>{{ acc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="filter_category" class="block text-sm font-medium text-gray-700">Category</label>
+                <select name="category" id="filter_category" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    <option value="">All Categories</option>
+                    {% for cat in all_categories %}
+                        <option value="{{ cat.pk }}" {% if request.GET.category == cat.pk|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="filter_start_date" class="block text-sm font-medium text-gray-700">Start Date</label>
+                <input type="date" name="start_date" id="filter_start_date" value="{{ request.GET.start_date|default:'' }}"
+                       class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div>
+                <label for="filter_end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                <input type="date" name="end_date" id="filter_end_date" value="{{ request.GET.end_date|default:'' }}"
+                       class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+            <div class="md:col-span-2 lg:col-span-4">
+                <label for="filter_search_query" class="block text-sm font-medium text-gray-700">Search (Title/Description)</label>
+                <input type="text" name="search_query" id="filter_search_query" value="{{ request.GET.search_query|default:'' }}"
+                       placeholder="Enter keywords..."
+                       class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+            </div>
+        </div>
+        <div class="flex flex-col sm:flex-row justify-end items-center gap-3 pt-3">
+            <a href="{% url 'tracker:transaction_list' %}" class="w-full sm:w-auto text-center py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition duration-150 ease-in-out">
+                Clear Filters
+            </a>
+            <button type="submit" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm text-sm flex items-center justify-center transition duration-150 ease-in-out">
+                <i class="fas fa-filter mr-2"></i>Apply Filters
+            </button>
+        </div>
+    </form>
+</div>
+
+
+{# Transaction List Form (for delete selected) #}
+<form method="POST" action="{% url 'tracker:transaction_delete_selected' %}" id="transaction-list-form">
+    {% csrf_token %}
+    <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+        <h2 class="text-2xl font-semibold text-gray-800">Transaction History</h2>
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button type="button" id="delete-selected-btn" 
+                    class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center transition duration-150 ease-in-out opacity-50 cursor-not-allowed" 
+                    disabled>
+                <i class="fas fa-trash-alt mr-2"></i>Delete Selected
+            </button>
+            <a href="{% url 'tracker:transaction_add' %}"
+               class="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center transition duration-150 ease-in-out">
+                <i class="fas fa-plus-circle mr-2"></i>Add
+            </a>
+            <a href="{% url 'tracker:import_csv_step1' %}" 
+               class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-md flex items-center justify-center transition duration-150 ease-in-out">
+                <i class="fas fa-file-csv mr-2"></i>Import
+            </a>
+        </div>
+    </div>
+
+    {% if transactions %}
+        {% include "tracker/_transaction_table.html" with transactions=transactions is_paginated=True %}
+
+        {# Pagination - Build URL with existing filter parameters #}
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Page navigation" class="mt-6 flex justify-center">
+            <ul class="inline-flex items-center -space-x-px">
+                {% with base_url=request.GET.urlencode %}
+                    {# Previous Page Link #}
+                    {% if page_obj.has_previous %}
+                        <li><a href="?page=1{% if base_url %}&amp;{{ base_url }}{% endif %}" class="py-2 px-3 ml-0 leading-tight text-gray-500 bg-white rounded-l-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700"><i class="fas fa-angle-double-left"></i></a></li>
+                        <li><a href="?page={{ page_obj.previous_page_number }}{% if base_url %}&amp;{{ base_url }}{% endif %}" class="py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700"><i class="fas fa-angle-left"></i></a></li>
+                    {% else %}
+                        <li><span class="py-2 px-3 ml-0 leading-tight text-gray-300 bg-white rounded-l-lg border border-gray-300 cursor-not-allowed"><i class="fas fa-angle-double-left"></i></span></li>
+                        <li><span class="py-2 px-3 leading-tight text-gray-300 bg-white border border-gray-300 cursor-not-allowed"><i class="fas fa-angle-left"></i></span></li>
+                    {% endif %}
+                    {# Current Page Info #}
+                    <li><span class="py-2 px-3 text-gray-700 bg-white border border-gray-300">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                    {# Next Page Link #}
+                    {% if page_obj.has_next %}
+                        <li><a href="?page={{ page_obj.next_page_number }}{% if base_url %}&amp;{{ base_url }}{% endif %}" class="py-2 px-3 leading-tight text-gray-500 bg-white border border-gray-300 hover:bg-gray-100 hover:text-gray-700"><i class="fas fa-angle-right"></i></a></li>
+                        <li><a href="?page={{ page_obj.paginator.num_pages }}{% if base_url %}&amp;{{ base_url }}{% endif %}" class="py-2 px-3 leading-tight text-gray-500 bg-white rounded-r-lg border border-gray-300 hover:bg-gray-100 hover:text-gray-700"><i class="fas fa-angle-double-right"></i></a></li>
+                    {% else %}
+                        <li><span class="py-2 px-3 leading-tight text-gray-300 bg-white border border-gray-300 cursor-not-allowed"><i class="fas fa-angle-right"></i></span></li>
+                        <li><span class="py-2 px-3 leading-tight text-gray-300 bg-white rounded-r-lg border border-gray-300 cursor-not-allowed"><i class="fas fa-angle-double-right"></i></span></li>
+                    {% endif %}
+                {% endwith %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-6 rounded-md shadow">
+            <div class="flex">
+                <div class="flex-shrink-0"><i class="fas fa-info-circle text-blue-500 text-2xl"></i></div>
+                <div class="ml-3">
+                    <p class="text-lg font-medium text-blue-700">No transactions found matching your criteria.</p>
+                    <p class="text-sm text-blue-600 mt-1">Try adjusting your filters or <a href="{% url 'tracker:transaction_list' %}" class="font-semibold hover:underline">clear all filters</a>.</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Zakatable toggle (existing functionality)
+    const zakatableCheckboxes = document.querySelectorAll('.zakatable-checkbox');
+    zakatableCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            const transactionId = this.dataset.transactionId;
+            const url = `/transactions/${transactionId}/toggle-zakatable/`; 
+            fetch(url, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken'), 'Content-Type': 'application/json', 'Accept': 'application/json'},
+            })
+            .then(response => response.ok ? response.json() : Promise.reject(response))
+            .then(data => {
+                if (data.status !== 'success') { this.checked = !this.checked; alert('Error: ' + (data.message || 'Unknown error'));}
+            })
+            .catch(error => { this.checked = !this.checked; console.error('Error:', error); alert('An unexpected error occurred.'); });
+        });
+    });
+
+    // Select/Deselect All Transactions
+    const selectAllCheckbox = document.getElementById('select-all-transactions');
+    const transactionCheckboxes = document.querySelectorAll('.transaction-checkbox');
+    const deleteSelectedBtn = document.getElementById('delete-selected-btn');
+
+    function toggleDeleteButtonState() {
+        if (!deleteSelectedBtn) return; // Guard clause
+        const anyChecked = Array.from(transactionCheckboxes).some(cb => cb.checked);
+        if (anyChecked) {
+            deleteSelectedBtn.disabled = false;
+            deleteSelectedBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            deleteSelectedBtn.classList.add('hover:bg-red-700');
+        } else {
+            deleteSelectedBtn.disabled = true;
+            deleteSelectedBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            deleteSelectedBtn.classList.remove('hover:bg-red-700');
+        }
+    }
+
+    if (selectAllCheckbox) {
+        selectAllCheckbox.addEventListener('change', function () {
+            transactionCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            toggleDeleteButtonState();
+        });
+    }
+
+    transactionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+            if (!this.checked && selectAllCheckbox) { 
+                selectAllCheckbox.checked = false;
+            } else {
+                if (selectAllCheckbox) {
+                    const allChecked = Array.from(transactionCheckboxes).every(cb => cb.checked);
+                    if (allChecked) {
+                        selectAllCheckbox.checked = true;
+                    }
+                }
+            }
+            toggleDeleteButtonState();
+        });
+    });
+    
+    toggleDeleteButtonState(); 
+
+    if (deleteSelectedBtn) {
+        deleteSelectedBtn.addEventListener('click', function (event) {
+            event.preventDefault(); 
+            const selectedCount = Array.from(transactionCheckboxes).filter(cb => cb.checked).length;
+            if (selectedCount === 0) {
+                alert('Please select at least one transaction to delete.');
+                return;
+            }
+            if (confirm(`Are you sure you want to delete ${selectedCount} selected transaction(s)? This action cannot be undone.`)) {
+                document.getElementById('transaction-list-form').submit();
+            }
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

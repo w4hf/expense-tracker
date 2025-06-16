@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}{{ loan.title }} - Loan Details{% endblock %}
+{% block page_title %}{{ loan.title }}{% endblock %}
+
+{% block content %}
+<div x-data="{ modalOpen: false }" class="space-y-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <h1 class="text-3xl font-bold text-gray-800 flex items-center">
+            <i class="fas fa-file-invoice-dollar mr-3 text-indigo-600"></i>{{ loan.title }}
+        </h1>
+        <div class="flex space-x-3">
+            <a href="{% url 'tracker:loan_edit' loan.pk %}" class="px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg shadow-sm flex items-center transition duration-150 ease-in-out">
+                <i class="fas fa-edit mr-2"></i>Edit Title
+            </a>
+            <a href="{% url 'tracker:loan_delete' loan.pk %}" class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg shadow-sm flex items-center transition duration-150 ease-in-out">
+                <i class="fas fa-trash-alt mr-2"></i>Delete Tracker
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white shadow-xl rounded-xl p-6">
+        <h2 class="text-lg font-semibold text-gray-700 mb-1">Summary</h2>
+        <p class="text-3xl font-bold 
+            {% if total_amount > 0 %}text-green-600{% elif total_amount < 0 %}text-red-600{% else %}text-gray-700{% endif %}">
+            {{ total_amount|floatformat:2|intcomma }} €
+        </p>
+        <p class="text-sm mt-1
+            {% if total_amount > 0 %}text-green-500{% elif total_amount < 0 %}text-red-500{% else %}text-gray-500{% endif %}">
+            {% if total_amount > 0 %}This means you are currently owed this amount.
+            {% elif total_amount < 0 %}This means you currently owe this amount.
+            {% else %}This loan is currently settled or has no outstanding balance.
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="bg-white shadow-xl rounded-xl">
+        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="text-xl font-semibold text-gray-800 flex items-center">
+                <i class="fas fa-list-ul mr-3 text-indigo-600"></i>Operations ({{ operations.count }})
+            </h2>
+            <button @click="modalOpen = true" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg shadow-sm flex items-center transition duration-150 ease-in-out">
+                <i class="fas fa-plus-circle mr-2"></i>Add Operation
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            {% if operations %}
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Operation</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Description</th>
+                        <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
+                        <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for op in operations %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{{ op.date|date:"Y-m-d" }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                            {% if op.operation_type == op.SEND %}
+                                <span class="flex items-center text-red-600"><i class="fas fa-arrow-up mr-2"></i>{{ op.get_operation_type_display }}</span>
+                            {% else %}
+                                <span class="flex items-center text-green-600"><i class="fas fa-arrow-down mr-2"></i>{{ op.get_operation_type_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-500 hidden sm:table-cell max-w-md truncate" title="{{op.description|default:''}}">{{ op.description|truncatewords:10|default:"N/A" }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-700 text-right">{{ op.amount|floatformat:2|intcomma }}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-center space-x-2">
+                            <a href="{% url 'tracker:loan_operation_edit' op.pk %}" class="text-indigo-600 hover:text-indigo-800" title="Edit Operation">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'tracker:loan_operation_delete' op.pk %}" class="text-red-500 hover:text-red-700" title="Delete Operation">
+                                <i class="fas fa-trash-alt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="p-10 text-center text-gray-500">
+                <i class="fas fa-folder-open text-4xl text-gray-300 mb-3"></i>
+                <p class="text-lg">No operations recorded for this loan yet.</p>
+                <p class="text-sm mt-1">Click "Add Operation" to get started.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div x-show="modalOpen" 
+         x-transition:enter="ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center" 
+         aria-labelledby="modal-title" 
+         role="dialog" 
+         aria-modal="true"
+         style="display: none;" {% comment %} Initially hidden, Alpine controls display {% endcomment %}>
+        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+        <div x-show="modalOpen"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             class="relative bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
+            <form method="post" action="{% url 'tracker:loan_detail' loan.pk %}" class="space-y-6">
+                {% csrf_token %}
+                <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                            <i class="fas fa-plus-circle text-indigo-600 text-xl"></i>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
+                                Add New Operation to "{{ loan.title }}"
+                            </h3>
+                            <div class="mt-4 space-y-4">
+                                {% for field in operation_form %}
+                                <div>
+                                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                                        {{ field.label }} {% if field.field.required %}<span class="required-asterisk">*</span>{% endif %}
+                                    </label>
+                                    <div class="mt-1">
+                                        {{ field }}
+                                    </div>
+                                    {% if field.help_text %}<p class="mt-1 text-xs text-gray-500">{{ field.help_text|safe }}</p>{% endif %}
+                                    {% for error in field.errors %}<p class="mt-1 text-xs text-red-600">{{ error }}</p>{% endfor %}
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                    <button type="submit" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm transition duration-150 ease-in-out">
+                        <i class="fas fa-save mr-2"></i>Save Operation
+                    </button>
+                    <button type="button" @click="modalOpen = false" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm transition duration-150 ease-in-out">
+                        Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-8">
+        <a href="{% url 'tracker:loan_list' %}" class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+            <i class="fas fa-arrow-left mr-2"></i>Back to All Loans
+        </a>
+    </div>
+</div>
+{% endblock %}
