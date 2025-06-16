@@ -60,7 +60,8 @@
                             <i class="fas fa-chevron-down ml-1 text-xs hidden lg:block"></i>
                         </button>
                         <div x-show="open" x-transition:enter="transition ease-out duration-100" x-transition:enter-start="transform opacity-0 scale-95" x-transition:enter-end="transform opacity-100 scale-100" x-transition:leave="transition ease-in duration-75" x-transition:leave-start="transform opacity-100 scale-100" x-transition:leave-end="transform opacity-0 scale-95" class="origin-top-right absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50" style="display: none;">
-                            <a href="{% url 'admin:password_change' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><i class="fas fa-key mr-2 w-4"></i>Change Password</a>
+                            <a href="{% url 'tracker:password_change' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><i class="fas fa-key mr-2 w-4"></i>Change Password</a>
+                            <!-- <a href="{% url 'admin:password_change' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><i class="fas fa-key mr-2 w-4"></i>Change Password</a> -->
                             <div class="border-t border-gray-100 my-1"></div>
                             <a href="{% url 'admin:logout' %}" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"><i class="fas fa-sign-out-alt mr-2 w-4"></i>Logout</a>
                         </div>

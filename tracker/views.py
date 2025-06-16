@@ -11,8 +11,11 @@ from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.views.decorators.http import require_POST, require_http_methods
-from django.contrib.auth.forms import UserCreationForm
+# from django.contrib.auth.forms import UserCreationForm
 from django.contrib.messages.views import SuccessMessageMixin
+from django.contrib.auth.views import PasswordChangeView
+from django.contrib.auth.mixins import LoginRequiredMixin
+
 from .forms import StaffUserCreationForm # Make sure to import the new form
 
 import os
@@ -442,6 +445,15 @@ class SignUpView(SuccessMessageMixin, CreateView):
     success_message = "Account created successfully! You can now log in."
 signup_view = SignUpView.as_view()
 
+
+class CustomPasswordChangeView(LoginRequiredMixin, PasswordChangeView):
+    template_name = 'registration/password_change.html'
+    success_url = reverse_lazy('tracker:dashboard')
+
+    def form_valid(self, form):
+        messages.success(self.request, "Your password was changed successfully!")
+        return super().form_valid(form)
+password_change_view = CustomPasswordChangeView.as_view()
 
 # CSV Import Views (no changes for this request)
 @login_required
