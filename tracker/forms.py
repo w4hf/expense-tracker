@@ -1,6 +1,9 @@
 
 from django import forms
 from .models import Account, Transaction, Loan, LoanOperation, Category
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+
 
 # Common Tailwind CSS classes for form inputs
 common_input_classes = 'mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
@@ -110,3 +113,22 @@ class LoanOperationForm(forms.ModelForm):
             'amount': forms.NumberInput(attrs={'class': common_input_classes, 'step': '0.01'}),
             'description': forms.TextInput(attrs={'class': common_input_classes, 'placeholder': 'e.g., Monthly repayment'}),
         }
+
+
+class StaffUserCreationForm(UserCreationForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['username'].widget.attrs.update({'class': common_input_classes, 'placeholder': 'Username'})
+        self.fields['password1'].widget.attrs.update({'class': common_input_classes, 'placeholder': 'Password'})
+        self.fields['password2'].widget.attrs.update({'class': common_input_classes, 'placeholder': 'Confirm Password'})
+
+    class Meta(UserCreationForm.Meta):
+        model = User
+        fields = ("username",)
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_staff = True
+        if commit:
+            user.save()
+        return user

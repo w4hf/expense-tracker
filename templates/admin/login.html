@@ -33,11 +33,12 @@
             <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
                 Welcome to Expense Tracker
             </h2>
+
+            
+        </div>
             <p class="mt-2 text-center text-sm text-gray-600">
                 {% translate 'Please enter your credentials to log in.' %}
             </p>
-        </div>
-
         {% if form.errors and not form.non_field_errors %}
         <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
             <div class="flex">
@@ -129,7 +130,13 @@
                     {% translate 'Log in' %}
                 </button>
             </div>
+        
+            <p class="mt-2 text-center text-sm text-gray-600">
+                Don't have an account? <a href="{% url 'tracker:signup' %}" class="font-medium text-indigo-600 hover:text-indigo-500">Create one</a>
+            </p>
+        
         </form>
+    
         
     </div>
 
@@ -148,5 +155,10 @@
             }
         });
     </script>
+
+
+
+
+
 </body>
 </html>

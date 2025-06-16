@@ -11,6 +11,10 @@ from django.core.files.storage import FileSystemStorage
 from django.conf import settings
 from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseRedirect
 from django.views.decorators.http import require_POST, require_http_methods
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.messages.views import SuccessMessageMixin
+from .forms import StaffUserCreationForm # Make sure to import the new form
+
 import os
 import uuid
 from decimal import Decimal, InvalidOperation 
@@ -428,6 +432,16 @@ class CategoryDeleteView(LoginRequiredMixin, DeleteView):
             context['has_transactions'] = False
         context['cancel_url'] = reverse_lazy('tracker:category_list')
         return context
+
+
+class SignUpView(SuccessMessageMixin, CreateView):
+    template_name = 'registration/signup.html'
+    # form_class = UserCreationForm
+    form_class = StaffUserCreationForm  # Use our new custom form
+    success_url = reverse_lazy('admin:login')
+    success_message = "Account created successfully! You can now log in."
+signup_view = SignUpView.as_view()
+
 
 # CSV Import Views (no changes for this request)
 @login_required

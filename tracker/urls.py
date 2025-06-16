@@ -7,6 +7,9 @@ urlpatterns = [
     # Dashboard View
     path('', views.dashboard_view, name='dashboard'),
 
+    # New users
+    path('signup/', views.signup_view, name='signup'),
+
     # Transaction Views
     path('transactions/', views.transaction_list_view, name='transaction_list'),
     path('transactions/add/', views.transaction_create_view, name='transaction_add'),
