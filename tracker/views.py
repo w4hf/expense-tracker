@@ -258,23 +258,48 @@ class TransactionListView(LoginRequiredMixin, ListView):
 transaction_list_view = TransactionListView.as_view()
 
 class TransactionCreateView(LoginRequiredMixin, CreateView):
-    model = Transaction; form_class = TransactionForm; template_name = 'tracker/transaction_form.html'; success_url = reverse_lazy('tracker:transaction_list')
-    def get_context_data(self, **kwargs): context = super().get_context_data(**kwargs); context['form_title'] = "Add New Transaction"; return context
-    def form_valid(self, form): messages.success(self.request, "Transaction added successfully."); return super().form_valid(form)
+    model = Transaction
+    form_class = TransactionForm
+    template_name = 'tracker/transaction_form.html'
+    success_url = reverse_lazy('tracker:transaction_list')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = "Add New Transaction"
+        return context
+    def form_valid(self, form):
+        messages.success(self.request, "Transaction added successfully.")
+        return super().form_valid(form)
+    
 transaction_create_view = TransactionCreateView.as_view()
 
 class TransactionUpdateView(LoginRequiredMixin, UpdateView):
-    model = Transaction; form_class = TransactionForm; template_name = 'tracker/transaction_form.html'; success_url = reverse_lazy('tracker:transaction_list')
-    def get_context_data(self, **kwargs): context = super().get_context_data(**kwargs); context['form_title'] = f"Edit Transaction"; context['form_subtitle'] = f"ID: {self.object.pk} | Date: {self.object.date.strftime('%Y-%m-%d')}"; return context
-    def form_valid(self, form): messages.success(self.request, "Transaction updated successfully."); return super().form_valid(form)
+    model = Transaction
+    form_class = TransactionForm
+    template_name = 'tracker/transaction_form.html'
+    success_url = reverse_lazy('tracker:transaction_list')
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['form_title'] = f"Edit Transaction"
+        context['form_subtitle'] = f"ID: {self.object.pk} | Date: {self.object.date.strftime('%Y-%m-%d')}"
+        return context
+    def form_valid(self, form):
+        messages.success(self.request, "Transaction updated successfully.")
+        return super().form_valid(form)
+    
 transaction_update_view = TransactionUpdateView.as_view()
 
 @login_required
 @require_POST 
 def transaction_delete_selected_view(request):
     transaction_ids = request.POST.getlist('transaction_ids')
-    if not transaction_ids: messages.warning(request, "No transactions selected for deletion."); return redirect('tracker:transaction_list')
-    try: transactions_to_delete = Transaction.objects.filter(pk__in=transaction_ids); count = transactions_to_delete.count(); transactions_to_delete.delete(); messages.success(request, f"Successfully deleted {count} transaction(s).")
+    if not transaction_ids:
+        messages.warning(request, "No transactions selected for deletion.")
+        return redirect('tracker:transaction_list')
+    try: 
+        transactions_to_delete = Transaction.objects.filter(pk__in=transaction_ids)
+        count = transactions_to_delete.count()
+        transactions_to_delete.delete()
+        messages.success(request, f"Successfully deleted {count} transaction(s).")
     except Exception as e: messages.error(request, f"Error deleting transactions: {e}")
     return redirect('tracker:transaction_list')
 
@@ -531,68 +556,121 @@ def import_csv_step3_preview_view(request):
             parsed_row, row_errors, display_row = {}, [], {}
             date_str = str(row.get(model_to_csv_header['date'], '')).strip()
             if date_str:
-                try: parsed_date = pd.to_datetime(date_str, format=date_format).strftime('%Y-%m-%d'); parsed_row['date'] = parsed_date; display_row['date'] = parsed_date
-                except ValueError: row_errors.append(f"R{index+2}: Invalid date '{date_str}'. Expected '{date_format}'."); display_row['date'] = date_str 
-            else: row_errors.append(f"R{index+2}: Date missing."); display_row['date'] = "Missing"
-            amount_str_raw = row.get(model_to_csv_header['amount'], ''); amount_str = str(amount_str_raw if amount_str_raw is not None else '').strip()
+                try:
+                    parsed_date = pd.to_datetime(date_str, format=date_format).strftime('%Y-%m-%d')
+                    parsed_row['date'] = parsed_date
+                    display_row['date'] = parsed_date
+                except ValueError:
+                    row_errors.append(f"R{index+2}: Invalid date '{date_str}'. Expected '{date_format}'.")
+                    display_row['date'] = date_str 
+            else:
+                row_errors.append(f"R{index+2}: Date missing.")
+                display_row['date'] = "Missing"
+            amount_str_raw = row.get(model_to_csv_header['amount'], '')
+            amount_str = str(amount_str_raw if amount_str_raw is not None else '').strip()
             if amount_str:
                 cleaned_amount_decimal = clean_decimal(amount_str, amount_decimal_separator)
-                if cleaned_amount_decimal is not None: parsed_row['amount'] = str(cleaned_amount_decimal); display_row['amount'] = cleaned_amount_decimal 
-                else: row_errors.append(f"R{index+2}: Invalid amount '{amount_str}'."); display_row['amount'] = amount_str 
-            else: row_errors.append(f"R{index+2}: Amount missing."); display_row['amount'] = "Missing"
-            balance_csv_header = model_to_csv_header.get('balance'); display_row['balance_after_transaction'] = None; parsed_row['balance_after_transaction'] = None 
+                if cleaned_amount_decimal is not None:
+                    parsed_row['amount'] = str(cleaned_amount_decimal)
+                    display_row['amount'] = cleaned_amount_decimal 
+                else:
+                    row_errors.append(f"R{index+2}: Invalid amount '{amount_str}'.")
+                    display_row['amount'] = amount_str 
+            else:
+                row_errors.append(f"R{index+2}: Amount missing.")
+                display_row['amount'] = "Missing"
+            balance_csv_header = model_to_csv_header.get('balance')
+            display_row['balance_after_transaction'] = None
+            parsed_row['balance_after_transaction'] = None 
             if balance_csv_header and row.get(balance_csv_header) is not None:
-                balance_str_raw = row.get(balance_csv_header, ''); balance_str = str(balance_str_raw if balance_str_raw is not None else '').strip()
+                balance_str_raw = row.get(balance_csv_header, '')
+                balance_str = str(balance_str_raw if balance_str_raw is not None else '').strip()
                 if balance_str:
                     cleaned_balance_decimal = clean_decimal(balance_str, balance_decimal_separator)
-                    if cleaned_balance_decimal is not None: parsed_row['balance_after_transaction'] = str(cleaned_balance_decimal); display_row['balance_after_transaction'] = cleaned_balance_decimal 
-                    else: row_errors.append(f"R{index+2}: Invalid balance '{balance_str}'."); display_row['balance_after_transaction'] = balance_str 
-            title_val = str(row.get(model_to_csv_header['title'], '')).strip(); parsed_row['title'] = title_val; display_row['title'] = title_val
-            if not title_val: row_errors.append(f"R{index+2}: Title missing.")
-            description_csv_header = model_to_csv_header.get('description'); desc_val = str(row.get(description_csv_header, '')).strip() if description_csv_header else ""; parsed_row['description'] = desc_val; display_row['description'] = desc_val
-            acc_name_val = str(row.get(model_to_csv_header['account_name'], '')).strip(); parsed_row['account_name'] = acc_name_val; display_row['account_name'] = acc_name_val
+                    if cleaned_balance_decimal is not None:
+                        parsed_row['balance_after_transaction'] = str(cleaned_balance_decimal)
+                        display_row['balance_after_transaction'] = cleaned_balance_decimal 
+                    else:
+                        row_errors.append(f"R{index+2}: Invalid balance '{balance_str}'.")
+                        display_row['balance_after_transaction'] = balance_str 
+            title_val = str(row.get(model_to_csv_header['title'], '')).strip()
+            parsed_row['title'] = title_val
+            display_row['title'] = title_val
+            if not title_val: 
+                row_errors.append(f"R{index+2}: Title missing.")
+            description_csv_header = model_to_csv_header.get('description')
+            desc_val = str(row.get(description_csv_header, '')).strip() if description_csv_header else ""
+            parsed_row['description'] = desc_val
+            display_row['description'] = desc_val
+            acc_name_val = str(row.get(model_to_csv_header['account_name'], '')).strip()
+            parsed_row['account_name'] = acc_name_val
+            display_row['account_name'] = acc_name_val
             if not acc_name_val: row_errors.append(f"R{index+2}: Account name missing.")
-            cat_name_val = str(row.get(model_to_csv_header['category_name'], '')).strip(); parsed_row['category_name'] = cat_name_val; display_row['category_name'] = cat_name_val
-            if not cat_name_val: row_errors.append(f"R{index+2}: Category name missing.")
-            if row_errors: errors.extend(row_errors)
-            if index < MAX_PREVIEW_ROWS: preview_data.append({**display_row, 'original_row_index': index + 2, 'has_errors': bool(row_errors)})
+            cat_name_val = str(row.get(model_to_csv_header['category_name'], '')).strip()
+            parsed_row['category_name'] = cat_name_val
+            display_row['category_name'] = cat_name_val
+            if not cat_name_val:
+                row_errors.append(f"R{index+2}: Category name missing.")
+            if row_errors:
+                errors.extend(row_errors)
+            if index < MAX_PREVIEW_ROWS:
+                preview_data.append({**display_row, 'original_row_index': index + 2, 'has_errors': bool(row_errors)})
             if not row_errors: parsed_rows_for_session.append(parsed_row) 
         request.session['parsed_csv_data_for_import'] = parsed_rows_for_session
-        if errors and not request.POST: messages.warning(request, "Review issues. Error-free rows will import.")
-        elif not parsed_rows_for_session and not errors: messages.warning(request, "No data parsed or all rows had errors. Check file/mapping."); 
-        if not df.empty and not preview_data and not errors and not parsed_rows_for_session : return redirect('tracker:import_csv_step2_mapping')
+        if errors and not request.POST:
+            messages.warning(request, "Review issues. Error-free rows will import.")
+        elif not parsed_rows_for_session and not errors:
+            messages.warning(request, "No data parsed or all rows had errors. Check file/mapping.")
+        if not df.empty and not preview_data and not errors and not parsed_rows_for_session :
+            return redirect('tracker:import_csv_step2_mapping')
     except Exception as e:
         messages.error(request, f"Error processing CSV for preview: {e}")
         if uploaded_file_path and os.path.exists(uploaded_file_path): os.remove(uploaded_file_path)
-        for key in ['csv_import_file_path', 'csv_header_mapping', 'csv_amount_decimal_separator', 'csv_balance_decimal_separator', 'csv_date_format', 'parsed_csv_data_for_import']: request.session.pop(key, None)
+        for key in ['csv_import_file_path', 'csv_header_mapping', 'csv_amount_decimal_separator', 'csv_balance_decimal_separator', 'csv_date_format', 'parsed_csv_data_for_import']:
+            request.session.pop(key, None)
         return redirect('tracker:import_csv_step1')
     return render(request, 'tracker/import_csv_step3_preview.html', {'preview_data': preview_data, 'total_parsed_rows': len(parsed_rows_for_session), 'total_csv_rows': len(df) if 'df' in locals() else 0, 'errors': errors[:10], 'has_more_errors': len(errors) > 10, 'filename': os.path.basename(uploaded_file_path)})
 
 @login_required
 def process_csv_import_view(request):
-    if request.method != 'POST': return HttpResponseBadRequest("POST request required.")
+    if request.method != 'POST':
+        return HttpResponseBadRequest("POST request required.")
     parsed_data_from_session = request.session.get('parsed_csv_data_for_import')
     uploaded_file_path = request.session.get('csv_import_file_path')
-    if not parsed_data_from_session: messages.error(request, "No data to import or session expired."); return redirect('tracker:import_csv_step1')
-    imported_count, skipped_count = 0, 0; created_accounts, created_categories = set(), set()
+    if not parsed_data_from_session:
+        messages.error(request, "No data to import or session expired.")
+        return redirect('tracker:import_csv_step1')
+    imported_count, skipped_count = 0, 0
+    created_accounts, created_categories = set(), set()
     for row_data_str in parsed_data_from_session:
         try:
-            amount_decimal = Decimal(row_data_str['amount']); balance_decimal = Decimal(row_data_str['balance_after_transaction']) if row_data_str.get('balance_after_transaction') else None
-            account, acc_created = Account.objects.get_or_create(name__iexact=row_data_str['account_name'], defaults={'name': row_data_str['account_name']}); 
-            if acc_created: created_accounts.add(account.name)
-            category, cat_created = Category.objects.get_or_create(name__iexact=row_data_str['category_name'], defaults={'name': row_data_str['category_name']}); 
-            if cat_created: created_categories.add(category.name)
+            amount_decimal = Decimal(row_data_str['amount'])
+            balance_decimal = Decimal(row_data_str['balance_after_transaction']) if row_data_str.get('balance_after_transaction') else None
+            account, acc_created = Account.objects.get_or_create(name__iexact=row_data_str['account_name'], defaults={'name': row_data_str['account_name']})
+            if acc_created:
+                created_accounts.add(account.name)
+            category, cat_created = Category.objects.get_or_create(name__iexact=row_data_str['category_name'], defaults={'name': row_data_str['category_name']})
+            if cat_created:
+                created_categories.add(category.name)
             Transaction.objects.create(date=row_data_str['date'], account=account, title=row_data_str['title'], description=row_data_str.get('description', ''), amount=amount_decimal, category=category, balance_after_transaction=balance_decimal, is_zakatable=False )
             imported_count += 1
-        except Exception as e: print(f"Error importing row {row_data_str}: {e}"); skipped_count += 1
+        except Exception as e:
+            print(f"Error importing row {row_data_str}: {e}")
+            skipped_count += 1
     if uploaded_file_path and os.path.exists(uploaded_file_path):
-        try: os.remove(uploaded_file_path)
-        except OSError as e: print(f"Error deleting temp file {uploaded_file_path}: {e}")
-    for key in ['csv_import_file_path', 'csv_header_mapping', 'csv_amount_decimal_separator', 'csv_balance_decimal_separator', 'csv_date_format', 'parsed_csv_data_for_import']: request.session.pop(key, None)
+        try:
+            os.remove(uploaded_file_path)
+        except OSError as e:
+            print(f"Error deleting temp file {uploaded_file_path}: {e}")
+    for key in ['csv_import_file_path', 'csv_header_mapping', 'csv_amount_decimal_separator', 'csv_balance_decimal_separator', 'csv_date_format', 'parsed_csv_data_for_import']:
+        request.session.pop(key, None)
     messages.success(request, f"Successfully imported {imported_count} transactions.")
-    if skipped_count > 0: messages.warning(request, f"Skipped {skipped_count} transactions due to errors during final import.")
-    if created_accounts: messages.info(request, f"New accounts created: {', '.join(created_accounts)}.")
-    if created_categories: messages.info(request, f"New categories created: {', '.join(created_categories)}.")
+    if skipped_count > 0:
+        messages.warning(request, f"Skipped {skipped_count} transactions due to errors during final import.")
+    if created_accounts:
+        messages.info(request, f"New accounts created: {', '.join(created_accounts)}.")
+    if created_categories:
+        messages.info(request, f"New categories created: {', '.join(created_categories)}.")
     return redirect('tracker:transaction_list')
 
 # --- Loan Views ---
