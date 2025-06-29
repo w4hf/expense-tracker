@@ -794,8 +794,10 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
 
         if not all([start_date, end_date]):
             messages.error(self.request, "Could not determine the date range for this Hijri year.")
-            context['net_income_for_year'] = 0
+            context['net_income_for_year'] = Decimal('0.00')
             context['zakatable_transactions'] = []
+            context['total_zakatable_amount'] = Decimal('0.00')
+            context['zakat_amount'] = Decimal('0.00')
             return context
 
         # Calculate the net income for the year
@@ -811,10 +813,21 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
             is_zakatable=True
         ).order_by('date')
 
+        # Calculate the sum of amounts for zakatable transactions
+        sum_of_zakatable_transactions = zakatable_transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        # Total zakatable amount is the net income for the period plus all zakatable expenses
+        total_zakatable_amount = net_income + sum_of_zakatable_transactions
+
+        # Calculate Zakat Amount (2.5%) only if the total is positive
+        zakat_amount = total_zakatable_amount * Decimal('0.025') if total_zakatable_amount > 0 else Decimal('0.00')
+
         context['gregorian_start_date'] = start_date
         context['gregorian_end_date'] = end_date
         context['net_income_for_year'] = net_income
         context['zakatable_transactions'] = zakatable_transactions
+        context['total_zakatable_amount'] = total_zakatable_amount
+        context['zakat_amount'] = zakat_amount
         return context
 
 class ZakatCreateView(LoginRequiredMixin, CreateView):
@@ -830,13 +843,13 @@ class ZakatCreateView(LoginRequiredMixin, CreateView):
         # Handle unique constraint violation gracefully
         try:
             return super().form_valid(form)
-        except IntegrityError: # Needs from django.db import IntegrityError
+        except IntegrityError:
             form.add_error('hijri_year', f"A Zakat table for the year {form.cleaned_data.get('hijri_year')} already exists.")
             return self.form_invalid(form)
 
 class ZakatDeleteView(LoginRequiredMixin, DeleteView):
     model = ZakatYear
-    template_name = 'tracker/zakat_confirm_delete.html' # Generic confirm delete template
+    template_name = 'tracker/zakat_confirm_delete.html'
     success_url = reverse_lazy('tracker:zakat_list')
     context_object_name = 'object'
 
