@@ -1,3 +1,4 @@
+{# tracker/templates/tracker/zakat_detail.html #}
 {% extends "base.html" %}
 {% load humanize %}
 
@@ -32,10 +33,10 @@
             <tbody class="bg-white divide-y divide-gray-200">
                 <tr class="bg-indigo-50">
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-800" colspan="2">
-                        Net Income for {{ zakat_year.hijri_year }}H (All Transactions)
+                        Lowest Total Balance During {{ zakat_year.hijri_year }}H {# Changed Label #}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-indigo-800">
-                        {{ net_income_for_year|floatformat:2|intcomma }}
+                        {{ lowest_total_balance_for_year|floatformat:2|intcomma }}
                     </td>
                 </tr>
 
@@ -55,7 +56,7 @@
                 {% empty %}
                 <tr>
                     <td colspan="3" class="px-6 py-10 text-center text-gray-500">
-                        No transactions marked as "Zakatable" were found for this year.
+                        No additional transactions marked as "Zakatable" were found for this year.
                     </td>
                 </tr>
                 {% endfor %}

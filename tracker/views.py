@@ -23,11 +23,10 @@ from .forms import StaffUserCreationForm # Make sure to import the new form
 import os
 import uuid
 from decimal import Decimal, InvalidOperation 
-from django.db.models import Sum, ProtectedError, Q, OuterRef, Subquery, F, Max
+from django.db.models import Sum, ProtectedError, Q, Min, OuterRef, Subquery, F, Max
 from django.utils import timezone
 import json 
 from datetime import datetime, timedelta # Ensure datetime is imported
-from django.db.models import Sum, ProtectedError, Q, Max # <--- IMPORT Q HERE
 
 from .models import Transaction, Account, Category, Loan, LoanOperation, ZakatYear
 from .forms import ( # Assuming these are still relevant for other views in the file
@@ -791,43 +790,85 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         zakat_year_obj = self.get_object()
         start_date, end_date = zakat_year_obj.get_gregorian_range()
+
         context['nisab_amount'] = zakat_year_obj.nisab_amount
 
         if not all([start_date, end_date]):
             messages.error(self.request, "Could not determine the date range for this Hijri year.")
-            context['net_income_for_year'] = Decimal('0.00')
+            context['lowest_total_balance_for_year'] = Decimal('0.00')
             context['zakatable_transactions'] = []
             context['total_zakatable_amount'] = Decimal('0.00')
             context['zakat_amount'] = Decimal('0.00')
             context['meets_nisab'] = False
             return context
 
-        # Calculate the net income for the year
-        net_income = Transaction.objects.filter(
+        # --- New Zakat Calculation Logic ---
+
+        accounts = Account.objects.all()
+        # Step 1: Get the last known balance for each account BEFORE the Zakat year starts.
+        account_balances = {}
+        for account in accounts:
+            latest_transaction_before = Transaction.objects.filter(
+                account=account,
+                date__lt=start_date,
+                balance_after_transaction__isnull=False
+            ).order_by('-date', '-created_at').first()
+            
+            if latest_transaction_before:
+                account_balances[account.id] = latest_transaction_before.balance_after_transaction
+            else:
+                account_balances[account.id] = Decimal('0.00')
+
+        # Step 2: Get all transactions with balances within the Zakat year, grouped by date.
+        transactions_in_range = Transaction.objects.filter(
             date__gte=start_date, 
-            date__lte=end_date
-        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+            date__lte=end_date,
+            balance_after_transaction__isnull=False
+        ).order_by('date', 'created_at').values('date', 'account_id', 'balance_after_transaction')
         
-        # Get all zakatable transactions within the year
+        daily_updates = {}
+        for t in transactions_in_range:
+            if t['date'] not in daily_updates:
+                daily_updates[t['date']] = {}
+            daily_updates[t['date']][t['account_id']] = t['balance_after_transaction']
+
+        # Step 3: Iterate through each day of the Hijri year to find the daily total and the lowest point.
+        daily_total_balances = []
+        all_dates = [start_date + timedelta(days=i) for i in range((end_date - start_date).days + 1)]
+
+        for current_date in all_dates:
+            # Update balances with any transactions that occurred on the current day
+            if current_date in daily_updates:
+                for acc_id, balance in daily_updates[current_date].items():
+                    account_balances[acc_id] = balance
+            
+            # Calculate the total sum of the most recent balances for all accounts
+            daily_sum = sum(account_balances.values())
+            daily_total_balances.append(daily_sum)
+
+        # Find the lowest of all the daily total balances
+        lowest_total_balance_for_year = min(daily_total_balances) if daily_total_balances else Decimal('0.00')
+
+        # --- End of New Zakat Calculation Logic ---
+
+        # Get all transactions marked as "zakatable" within the year
         zakatable_transactions = Transaction.objects.filter(
             date__gte=start_date,
             date__lte=end_date,
             is_zakatable=True
         ).order_by('date')
 
-        # Calculate the sum of amounts for zakatable transactions
         sum_of_zakatable_transactions = zakatable_transactions.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-
-        # Total zakatable amount is the net income for the period plus all zakatable expenses
-        total_zakatable_amount = net_income + sum_of_zakatable_transactions
+        
+        # The total zakatable amount is the sum of the items explicitly marked, plus the lowest total balance from the period.
+        total_zakatable_amount = lowest_total_balance_for_year + sum_of_zakatable_transactions
+        
         meets_nisab = total_zakatable_amount >= zakat_year_obj.nisab_amount
-
-        # Calculate Zakat Amount (2.5%) only if the total is positive and meets nisab
         zakat_amount = total_zakatable_amount * Decimal('0.025') if meets_nisab else Decimal('0.00')
 
         context['gregorian_start_date'] = start_date
         context['gregorian_end_date'] = end_date
-        context['net_income_for_year'] = net_income
+        context['lowest_total_balance_for_year'] = lowest_total_balance_for_year
         context['zakatable_transactions'] = zakatable_transactions
         context['total_zakatable_amount'] = total_zakatable_amount
         context['zakat_amount'] = zakat_amount
