@@ -5,11 +5,16 @@
 {% block page_title %}Zakat for {{ zakat_year.hijri_year }}H{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-4">
-    <p class="text-sm text-gray-600">
-        Gregorian Date Range: <strong>{{ gregorian_start_date|date:"F d, Y" }}</strong> to <strong>{{ gregorian_end_date|date:"F d, Y" }}</strong>
-    </p>
-    <a href="{% url 'tracker:zakat_delete' zakat_year.pk %}" class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg shadow-sm flex items-center transition duration-150 ease-in-out">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+    <div>
+        <p class="text-sm text-gray-600">
+            Gregorian Date Range: <strong>{{ gregorian_start_date|date:"F d, Y" }}</strong> to <strong>{{ gregorian_end_date|date:"F d, Y" }}</strong>
+        </p>
+        <p class="text-sm text-gray-600">
+            Nisab for this Year: <strong class="text-gray-800">{{ nisab_amount|floatformat:2|intcomma }} €</strong>
+        </p>
+    </div>
+    <a href="{% url 'tracker:zakat_delete' zakat_year.pk %}" class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg shadow-sm flex items-center justify-center transition duration-150 ease-in-out">
         <i class="fas fa-trash-alt mr-2"></i>Delete This Table
     </a>
 </div>
@@ -65,11 +70,13 @@
     </div>
 </div>
 
-<div class="mt-8 bg-gradient-to-r from-green-500 to-emerald-600 shadow-lg rounded-xl p-6 text-white text-center">
+<div class="mt-8 bg-gradient-to-r {% if meets_nisab %}from-green-500 to-emerald-600{% else %}from-yellow-400 to-amber-500{% endif %} shadow-lg rounded-xl p-6 text-white text-center">
     <h3 class="text-lg font-medium uppercase tracking-wider">Zakat Due (2.5%)</h3>
     <p class="mt-2 text-4xl font-bold">{{ zakat_amount|floatformat:2|intcomma }} €</p>
-    {% if total_zakatable_amount <= 0 %}
-        <p class="mt-1 text-sm opacity-80">(Zakatable amount is not positive, no Zakat is due)</p>
+    {% if meets_nisab %}
+        <p class="mt-1 text-sm opacity-80">(Total zakatable amount is above the Nisab of {{ nisab_amount|floatformat:2|intcomma }} €)</p>
+    {% else %}
+        <p class="mt-1 text-sm opacity-80">(Total zakatable amount is below the Nisab of {{ nisab_amount|floatformat:2|intcomma }} €, so no Zakat is due)</p>
     {% endif %}
 </div>
 

@@ -54,12 +54,14 @@ class TransactionForm(forms.ModelForm):
 class ZakatYearForm(forms.ModelForm):
     class Meta:
         model = ZakatYear
-        fields = ['hijri_year']
+        fields = ['hijri_year', 'nisab_amount'] # Add nisab_amount
         widgets = {
-            'hijri_year': forms.NumberInput(attrs={'class': common_input_classes, 'placeholder': 'e.g., 1446'})
+            'hijri_year': forms.NumberInput(attrs={'class': common_input_classes, 'placeholder': 'e.g., 1446'}),
+            'nisab_amount': forms.NumberInput(attrs={'class': common_input_classes, 'placeholder': 'e.g., 5000.00', 'step': '0.01'})
         }
         labels = {
-            'hijri_year': 'Hijri Year (e.g., 1446)'
+            'hijri_year': 'Hijri Year (e.g., 1446)',
+            'nisab_amount': 'Nisab Amount (€)'
         }
 
 class CSVImportStep1Form(forms.Form):

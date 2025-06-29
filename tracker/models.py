@@ -77,7 +77,8 @@ class Loan(models.Model):
 
 
 class ZakatYear(models.Model):
-    hijri_year = models.PositiveIntegerField(unique=True, help_text="The Hijri year for Zakat calculation (e.g., 1446)")
+    hijri_year = models.PositiveIntegerField(unique=True, default=1446, help_text="The Hijri year for Zakat calculation (e.g., 1446)")
+    nisab_amount = models.DecimalField(max_digits=10, decimal_places=2, default=5900.00, help_text="The Nisab amount for this year in your currency (e.g., 5000.00)")
     # user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE) # Add for multi-user apps
 
     def __str__(self):

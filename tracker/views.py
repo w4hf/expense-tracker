@@ -791,6 +791,7 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
         context = super().get_context_data(**kwargs)
         zakat_year_obj = self.get_object()
         start_date, end_date = zakat_year_obj.get_gregorian_range()
+        context['nisab_amount'] = zakat_year_obj.nisab_amount
 
         if not all([start_date, end_date]):
             messages.error(self.request, "Could not determine the date range for this Hijri year.")
@@ -798,6 +799,7 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
             context['zakatable_transactions'] = []
             context['total_zakatable_amount'] = Decimal('0.00')
             context['zakat_amount'] = Decimal('0.00')
+            context['meets_nisab'] = False
             return context
 
         # Calculate the net income for the year
@@ -818,9 +820,10 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
 
         # Total zakatable amount is the net income for the period plus all zakatable expenses
         total_zakatable_amount = net_income + sum_of_zakatable_transactions
+        meets_nisab = total_zakatable_amount >= zakat_year_obj.nisab_amount
 
-        # Calculate Zakat Amount (2.5%) only if the total is positive
-        zakat_amount = total_zakatable_amount * Decimal('0.025') if total_zakatable_amount > 0 else Decimal('0.00')
+        # Calculate Zakat Amount (2.5%) only if the total is positive and meets nisab
+        zakat_amount = total_zakatable_amount * Decimal('0.025') if meets_nisab else Decimal('0.00')
 
         context['gregorian_start_date'] = start_date
         context['gregorian_end_date'] = end_date
@@ -828,6 +831,7 @@ class ZakatDetailView(LoginRequiredMixin, DetailView):
         context['zakatable_transactions'] = zakatable_transactions
         context['total_zakatable_amount'] = total_zakatable_amount
         context['zakat_amount'] = zakat_amount
+        context['meets_nisab'] = meets_nisab
         return context
 
 class ZakatCreateView(LoginRequiredMixin, CreateView):
