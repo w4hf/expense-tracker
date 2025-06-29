@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% load humanize %}
+
+{% block title %}Zakat for {{ zakat_year.hijri_year }}H - Expense Tracker{% endblock %}
+{% block page_title %}Zakat for {{ zakat_year.hijri_year }}H{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-4">
+    <p class="text-sm text-gray-600">
+        Gregorian Date Range: <strong>{{ gregorian_start_date|date:"F d, Y" }}</strong> to <strong>{{ gregorian_end_date|date:"F d, Y" }}</strong>
+    </p>
+    <a href="{% url 'tracker:zakat_delete' zakat_year.pk %}" class="px-4 py-2 text-sm font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded-lg shadow-sm flex items-center transition duration-150 ease-in-out">
+        <i class="fas fa-trash-alt mr-2"></i>Delete This Table
+    </a>
+</div>
+
+<div class="bg-white shadow-xl rounded-xl">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title / Description</th>
+                    <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <tr class="bg-indigo-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-indigo-800" colspan="2">
+                        Net Income for {{ zakat_year.hijri_year }}H (All Transactions)
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-bold text-indigo-800">
+                        {{ net_income_for_year|floatformat:2|intcomma }}
+                    </td>
+                </tr>
+
+                {% for transaction in zakatable_transactions %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ transaction.date|date:"Y-m-d" }}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">
+                        <p class="font-medium">{{ transaction.title }}</p>
+                        {% if transaction.description %}
+                            <p class="text-xs text-gray-500">{{ transaction.description|truncatewords:15 }}</p>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm {% if transaction.amount < 0 %}text-red-600{% else %}text-green-600{% endif %}">
+                        {{ transaction.amount|floatformat:2|intcomma }}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="3" class="px-6 py-10 text-center text-gray-500">
+                        No transactions marked as "Zakatable" were found for this year.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-8">
+    <a href="{% url 'tracker:zakat_list' %}" class="text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
+        <i class="fas fa-arrow-left mr-2"></i>Back to All Zakat Tables
+    </a>
+</div>
+{% endblock %}

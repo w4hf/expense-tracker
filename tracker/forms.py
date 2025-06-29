@@ -1,6 +1,6 @@
 
 from django import forms
-from .models import Account, Transaction, Loan, LoanOperation, Category
+from .models import Account, Transaction, Loan, LoanOperation, Category, ZakatYear
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 
@@ -50,6 +50,17 @@ class TransactionForm(forms.ModelForm):
         self.fields['category'].required = False
         self.fields['balance_after_transaction'].required = False
 
+
+class ZakatYearForm(forms.ModelForm):
+    class Meta:
+        model = ZakatYear
+        fields = ['hijri_year']
+        widgets = {
+            'hijri_year': forms.NumberInput(attrs={'class': common_input_classes, 'placeholder': 'e.g., 1446'})
+        }
+        labels = {
+            'hijri_year': 'Hijri Year (e.g., 1446)'
+        }
 
 class CSVImportStep1Form(forms.Form):
     csv_file = forms.FileField(

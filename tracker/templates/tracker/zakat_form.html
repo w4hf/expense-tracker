@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Create Zakat Table - Expense Tracker{% endblock %}
+{% block page_title %}Create New Zakat Year Table{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-lg">
+    <p class="text-sm text-gray-600 mb-6">Enter a Hijri year to create a new Zakat calculation table. The table will be automatically populated with relevant data.</p>
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div>
+            <label for="{{ form.hijri_year.id_for_label }}" class="block text-sm font-medium text-gray-700 form-label">
+                {{ form.hijri_year.label }} {% if form.hijri_year.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            <div class="mt-1">
+                {{ form.hijri_year }}
+            </div>
+            {% if form.hijri_year.help_text %}
+                <p class="mt-2 text-xs text-gray-500">{{ form.hijri_year.help_text|safe }}</p>
+            {% endif %}
+            {% for error in form.hijri_year.errors %}
+                <p class="mt-2 text-xs text-red-600">{{ error }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-end space-x-3 border-t border-gray-200 pt-6">
+            <a href="{% url 'tracker:zakat_list' %}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 border border-transparent rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <i class="fas fa-plus-circle mr-2"></i>Create Table
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

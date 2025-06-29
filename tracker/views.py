@@ -16,6 +16,8 @@ from django.contrib.messages.views import SuccessMessageMixin
 from django.contrib.auth.views import PasswordChangeView
 from django.contrib.auth.mixins import LoginRequiredMixin
 
+from django.db import IntegrityError
+
 from .forms import StaffUserCreationForm # Make sure to import the new form
 
 import os
@@ -25,13 +27,13 @@ from django.db.models import Sum, ProtectedError, Q, OuterRef, Subquery, F, Max
 from django.utils import timezone
 import json 
 from datetime import datetime, timedelta # Ensure datetime is imported
-from django.db.models import Sum, ProtectedError, Q # <--- IMPORT Q HERE
+from django.db.models import Sum, ProtectedError, Q, Max # <--- IMPORT Q HERE
 
-from .models import Transaction, Account, Category, Loan, LoanOperation
+from .models import Transaction, Account, Category, Loan, LoanOperation, ZakatYear
 from .forms import ( # Assuming these are still relevant for other views in the file
     TransactionForm, AccountForm, CategoryForm, 
     CSVImportStep1Form, CSVImportHeaderMappingForm,
-    LoanForm, LoanOperationForm
+    LoanForm, LoanOperationForm, ZakatYearForm
 )
 
 # Helper function (no changes)
@@ -772,4 +774,80 @@ class LoanOperationDeleteView(LoginRequiredMixin, DeleteView):
         context = super().get_context_data(**kwargs)
         context['delete_message'] = f"Are you sure you want to delete this operation ({self.object.get_operation_type_display()} of {self.object.amount}€ on {self.object.date}) for loan '{self.object.loan.title}'?"
         context['cancel_url'] = reverse('tracker:loan_detail', kwargs={'pk': self.object.loan.pk})
+        return context
+
+class ZakatListView(LoginRequiredMixin, ListView):
+    model = ZakatYear
+    template_name = 'tracker/zakat_list.html'
+    context_object_name = 'zakat_years'
+    paginate_by = 10
+
+class ZakatDetailView(LoginRequiredMixin, DetailView):
+    model = ZakatYear
+    template_name = 'tracker/zakat_detail.html'
+    context_object_name = 'zakat_year'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        zakat_year_obj = self.get_object()
+        start_date, end_date = zakat_year_obj.get_gregorian_range()
+
+        if not all([start_date, end_date]):
+            messages.error(self.request, "Could not determine the date range for this Hijri year.")
+            context['net_income_for_year'] = 0
+            context['zakatable_transactions'] = []
+            return context
+
+        # Calculate the net income for the year
+        net_income = Transaction.objects.filter(
+            date__gte=start_date, 
+            date__lte=end_date
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+        
+        # Get all zakatable transactions within the year
+        zakatable_transactions = Transaction.objects.filter(
+            date__gte=start_date,
+            date__lte=end_date,
+            is_zakatable=True
+        ).order_by('date')
+
+        context['gregorian_start_date'] = start_date
+        context['gregorian_end_date'] = end_date
+        context['net_income_for_year'] = net_income
+        context['zakatable_transactions'] = zakatable_transactions
+        return context
+
+class ZakatCreateView(LoginRequiredMixin, CreateView):
+    model = ZakatYear
+    form_class = ZakatYearForm
+    template_name = 'tracker/zakat_form.html'
+    
+    def get_success_url(self):
+        messages.success(self.request, f"Zakat table for Hijri year {self.object.hijri_year}H created successfully.")
+        return reverse('tracker:zakat_detail', kwargs={'pk': self.object.pk})
+
+    def form_valid(self, form):
+        # Handle unique constraint violation gracefully
+        try:
+            return super().form_valid(form)
+        except IntegrityError: # Needs from django.db import IntegrityError
+            form.add_error('hijri_year', f"A Zakat table for the year {form.cleaned_data.get('hijri_year')} already exists.")
+            return self.form_invalid(form)
+
+class ZakatDeleteView(LoginRequiredMixin, DeleteView):
+    model = ZakatYear
+    template_name = 'tracker/zakat_confirm_delete.html' # Generic confirm delete template
+    success_url = reverse_lazy('tracker:zakat_list')
+    context_object_name = 'object'
+
+    def post(self, request, *args, **kwargs):
+        year_to_delete = self.get_object().hijri_year
+        response = super().post(request, *args, **kwargs)
+        messages.success(request, f"Zakat table for {year_to_delete}H deleted successfully.")
+        return response
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['delete_message'] = f"Are you sure you want to delete the Zakat table for {self.object.hijri_year}H?"
+        context['cancel_url'] = reverse('tracker:zakat_list')
         return context

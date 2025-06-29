@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Deletion - Expense Tracker{% endblock %}
+{% block page_title %}Confirm Deletion{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-xl shadow-xl border-t-4 border-red-500">
+    <div class="flex items-center mb-4">
+        <i class="fas fa-exclamation-triangle text-3xl text-red-500 mr-4"></i>
+        <h2 class="text-xl font-semibold text-gray-800">Are you sure?</h2>
+    </div>
+    <p class="text-gray-600 mb-6">{{ delete_message|default:"Are you sure you want to delete this item? This action cannot be undone." }}</p>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="flex items-center justify-end space-x-3 border-t border-gray-200 pt-6">
+            <a href="{{ cancel_url|default:request.META.HTTP_REFERER|default_if_none:'tracker:dashboard' }}" class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
+                <i class="fas fa-times mr-2"></i>Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 border border-transparent rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition duration-150 ease-in-out">
+                <i class="fas fa-trash-alt mr-2"></i>Yes, Delete
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

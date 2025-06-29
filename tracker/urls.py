@@ -46,4 +46,11 @@ urlpatterns = [
     path('loans/<int:pk>/delete/', views.LoanDeleteView.as_view(), name='loan_delete'),
     path('loans/operations/<int:pk>/edit/', views.LoanOperationUpdateView.as_view(), name='loan_operation_edit'),
     path('loans/operations/<int:pk>/delete/', views.LoanOperationDeleteView.as_view(), name='loan_operation_delete'),
+
+    # Zakat Views
+    path('zakat/', views.ZakatListView.as_view(), name='zakat_list'),
+    path('zakat/new/', views.ZakatCreateView.as_view(), name='zakat_create'),
+    path('zakat/<int:pk>/', views.ZakatDetailView.as_view(), name='zakat_detail'),
+    path('zakat/<int:pk>/delete/', views.ZakatDeleteView.as_view(), name='zakat_delete'),
+
 ]

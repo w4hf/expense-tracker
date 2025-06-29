@@ -3,3 +3,4 @@ django-crispy-forms
 pandas>=1.0  # For CSV processing in views
 # psycopg2-binary  # If using PostgreSQL
 # openpyxl # if you plan to support excel files with pandas
+hijri-converter>=2.2.4
